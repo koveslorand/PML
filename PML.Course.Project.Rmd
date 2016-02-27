@@ -1,0 +1,50 @@
+---
+title: "Practical Machine Learning Prediction Assignment"
+author: "Lorand Koves"
+date: "February 25, 2016"
+output: html_document
+---
+
+## Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Loading and Cleaning the Data
+I load the required packages and for the sake of reprodicibilty I set the seed. Then I set the working directory and load the data.
+```{r, echo=TRUE}
+require(caret)
+set.seed(8565)
+TrainingData <-read.csv("pml-training.csv", header=TRUE, na.strings=c("NA", "#DIV/0!"))
+TestData <-read.csv("pml-testing.csv", header=TRUE, na.string=c("NA", "#DIV/0!"))
+dim(TrainingData)
+dim(TestData)
+```
+Following that from the Training dataset I remove all variables, which have at least one "NA" value and variables which doesn't seem to be relevant in our model. This leaves 52 out of the original 160 variables.
+```{r, echo=TRUE}
+TrainingData <- TrainingData[ , colSums(is.na(TrainingData)) == 0]
+TrainingData <- TrainingData[,-c(1:8)]
+dim(TrainingData)
+```
+
+## Cross Validation
+I use cross validation by splitting the training dataset into a training (TrainingDataTraining) and a test set (TraningDataTest) with a 70%-30% ratio.
+```{r, echo=TRUE}
+TrainingDatainTrain <- createDataPartition(y=TrainingData$classe, p=0.70,list=FALSE)
+TrainingDataTraining <- TrainingData[TrainingDatainTrain,] 
+TrainingDataTest <- TrainingData[-TrainingDatainTrain,]
+dim(TrainingDataTraining)
+dim(TrainingDataTest)
+```
+## Building the Model
+I use Random Forest method to build the model on the training set. The trainControl code piece was found on the internet and it is very important as it reduces the processing time significantly. Then I use the model to predict the test part of the training dataset. This way I test the accuracy of the model, which is 99%.
+```{r, echo=TRUE}
+TrCtrl <- trainControl(allowParallel=TRUE, method="cv", number=4)
+ModFit <- train(classe ~ ., data=TrainingDataTraining, model="rf", trControl=TrCtrl)
+Prediction <- predict(ModFit, newdata=TrainingDataTest)
+sum(Prediction == TrainingDataTest$classe) / length(Prediction)
+```
+
+## Apply the Model on the Test dataset
+I use the model built earlier to predict the casse variable of the 20 observations in the test dataset.
+```{r, echo=TRUE}
+predict(ModFit, newdata=TestData)
+```
